@@ -1,8 +1,11 @@
 package com.aitodu.platform.returns.application.internal;
 
 import com.aitodu.platform.inventory.interfaces.acl.InventoryContextFacade;
+import com.aitodu.platform.returns.application.ReturnCommandService;
+import com.aitodu.platform.returns.application.ReturnQueryService;
 import com.aitodu.platform.returns.domain.model.aggregates.CustomerReturn;
 import com.aitodu.platform.returns.domain.model.commands.RecordReturnCommand;
+import com.aitodu.platform.returns.domain.model.queries.*;
 import com.aitodu.platform.returns.domain.repositories.ReturnRepository;
 import com.aitodu.platform.returns.interfaces.acl.ReturnsContextFacade;
 import com.aitodu.platform.sales.interfaces.acl.SalesContextFacade;
@@ -15,7 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ReturnService implements ReturnsContextFacade {
+public class ReturnService
+    implements ReturnsContextFacade, ReturnCommandService, ReturnQueryService {
   private final ReturnRepository repository;
   private final SalesContextFacade sales;
   private final InventoryContextFacade inventory;
@@ -66,5 +70,10 @@ public class ReturnService implements ReturnsContextFacade {
   @Transactional(readOnly = true)
   public long recordedLossCents(UUID t) {
     return repository.findAll(t).stream().mapToLong(CustomerReturn::lossCents).sum();
+  }
+
+  @Transactional(readOnly = true)
+  public List<CustomerReturn> handle(GetReturnsQuery q) {
+    return list(q.tenantId());
   }
 }

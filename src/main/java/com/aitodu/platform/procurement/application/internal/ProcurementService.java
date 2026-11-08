@@ -1,9 +1,12 @@
 package com.aitodu.platform.procurement.application.internal;
 
 import com.aitodu.platform.inventory.interfaces.acl.InventoryContextFacade;
+import com.aitodu.platform.procurement.application.ProcurementCommandService;
+import com.aitodu.platform.procurement.application.ProcurementQueryService;
 import com.aitodu.platform.procurement.domain.model.aggregates.*;
 import com.aitodu.platform.procurement.domain.model.commands.*;
 import com.aitodu.platform.procurement.domain.model.entities.PurchaseLine;
+import com.aitodu.platform.procurement.domain.model.queries.*;
 import com.aitodu.platform.procurement.domain.repositories.*;
 import com.aitodu.platform.shared.application.*;
 import com.aitodu.platform.shared.application.result.Result;
@@ -14,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ProcurementService {
+public class ProcurementService implements ProcurementCommandService, ProcurementQueryService {
 
   private final PurchaseRepository orders;
   private final SupplierRepository suppliers;
@@ -100,5 +103,15 @@ public class ProcurementService {
   @Transactional(readOnly = true)
   public List<Supplier> suppliers(UUID t) {
     return suppliers.findAll(t);
+  }
+
+  @Transactional(readOnly = true)
+  public List<Supplier> handle(GetSuppliersQuery q) {
+    return suppliers(q.tenantId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchaseOrder> handle(GetPurchasesQuery q) {
+    return orders(q.tenantId());
   }
 }

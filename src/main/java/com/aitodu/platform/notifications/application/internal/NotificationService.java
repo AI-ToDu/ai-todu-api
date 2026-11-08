@@ -1,7 +1,10 @@
 package com.aitodu.platform.notifications.application.internal;
 
+import com.aitodu.platform.notifications.application.NotificationCommandService;
+import com.aitodu.platform.notifications.application.NotificationQueryService;
 import com.aitodu.platform.notifications.domain.model.aggregates.Notification;
 import com.aitodu.platform.notifications.domain.model.commands.*;
+import com.aitodu.platform.notifications.domain.model.queries.*;
 import com.aitodu.platform.notifications.domain.repositories.NotificationRepository;
 import com.aitodu.platform.shared.application.*;
 import com.aitodu.platform.shared.application.result.Result;
@@ -12,7 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class NotificationService implements IntegrationSubscriber {
+public class NotificationService
+    implements IntegrationSubscriber, NotificationCommandService, NotificationQueryService {
   private final NotificationRepository repository;
   private final CommandExecutor commands;
 
@@ -54,5 +58,10 @@ public class NotificationService implements IntegrationSubscriber {
           repository.save(n);
           return n;
         });
+  }
+
+  @Transactional(readOnly = true)
+  public List<Notification> handle(GetNotificationsQuery q) {
+    return list(q.tenantId());
   }
 }

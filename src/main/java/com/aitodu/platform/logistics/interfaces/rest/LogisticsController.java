@@ -3,9 +3,15 @@ package com.aitodu.platform.logistics.interfaces.rest;
 import static com.aitodu.platform.logistics.interfaces.rest.LogisticsResources.*;
 
 import com.aitodu.platform.iam.infrastructure.security.WorkspacePrincipal;
-import com.aitodu.platform.logistics.application.internal.LogisticsService;
+import com.aitodu.platform.logistics.application.LogisticsCommandService;
+import com.aitodu.platform.logistics.application.LogisticsQueryService;
 import com.aitodu.platform.logistics.domain.model.commands.*;
 import com.aitodu.platform.logistics.domain.model.commands.PrepareDispatchCommand;
+import com.aitodu.platform.logistics.domain.model.queries.*;
+import com.aitodu.platform.logistics.interfaces.rest.transform.CandidateResourceFromEntityAssembler;
+import com.aitodu.platform.logistics.interfaces.rest.transform.DispatchResourceFromEntityAssembler;
+import com.aitodu.platform.logistics.interfaces.rest.transform.DriverResponseResourceFromEntityAssembler;
+import com.aitodu.platform.logistics.interfaces.rest.transform.VehicleResponseResourceFromEntityAssembler;
 import com.aitodu.platform.shared.interfaces.rest.*;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -17,48 +23,53 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1")
 @PreAuthorize("hasAnyRole('ADMIN','LOGISTICS')")
 public class LogisticsController {
-  private final LogisticsService service;
+  private final LogisticsCommandService commands;
+  private final LogisticsQueryService queries;
 
-  public LogisticsController(LogisticsService s) {
-    service = s;
+  public LogisticsController(LogisticsCommandService commands, LogisticsQueryService queries) {
+    this.commands = commands;
+    this.queries = queries;
   }
 
   @GetMapping("/dispatches")
   public CollectionResource<DispatchResource> list(@AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.list(p.tenantId()).stream().map(DispatchResource::from).toList());
+        queries.handle(new GetDispatchesQuery(p.tenantId())).stream()
+            .map(DispatchResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping("/dispatches")
-  public ResponseEntity<DispatchResource> prepare(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody PrepareDispatchResource r) {
+  public ResponseEntity<?> prepare(
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody PrepareDispatchResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(
+        commands.handle(
             new PrepareDispatchCommand(
                 p.tenantId(), r.saleIds(), r.driverId(), r.vehicleId(), r.destination())),
-        DispatchResource::from,
+        DispatchResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 
   @PatchMapping("/dispatches/{id}")
-  public ResponseEntity<DispatchResource> transition(
+  public ResponseEntity<?> transition(
       @AuthenticationPrincipal WorkspacePrincipal p,
       @PathVariable UUID id,
-      @RequestBody TransitionResource r) {
+      @jakarta.validation.Valid @RequestBody TransitionResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(new TransitionDispatchCommand(p.tenantId(), id, r.status(), r.recipient())),
-        DispatchResource::from,
+        commands.handle(new TransitionDispatchCommand(p.tenantId(), id, r.status(), r.recipient())),
+        DispatchResourceFromEntityAssembler::toResourceFromEntity,
         200);
   }
 
   @PostMapping("/dispatches/{id}/incidents")
-  public ResponseEntity<DispatchResource> incident(
+  public ResponseEntity<?> incident(
       @AuthenticationPrincipal WorkspacePrincipal p,
       @PathVariable UUID id,
-      @RequestBody IncidentResource r) {
+      @jakarta.validation.Valid @RequestBody IncidentResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(new ReportDeliveryIncidentCommand(p.tenantId(), id, r.description())),
-        DispatchResource::from,
+        commands.handle(new ReportDeliveryIncidentCommand(p.tenantId(), id, r.description())),
+        DispatchResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 
@@ -66,38 +77,46 @@ public class LogisticsController {
   public CollectionResource<CandidateResource> candidates(
       @AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.candidates(p.tenantId()).stream().map(CandidateResource::from).toList());
+        queries.handle(new GetDispatchCandidatesQuery(p.tenantId())).stream()
+            .map(CandidateResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @GetMapping("/drivers")
   public CollectionResource<DriverResponseResource> drivers(
       @AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.drivers(p.tenantId()).stream().map(DriverResponseResource::from).toList());
+        queries.handle(new GetDriversQuery(p.tenantId())).stream()
+            .map(DriverResponseResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @GetMapping("/vehicles")
   public CollectionResource<VehicleResponseResource> vehicles(
       @AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.vehicles(p.tenantId()).stream().map(VehicleResponseResource::from).toList());
+        queries.handle(new GetVehiclesQuery(p.tenantId())).stream()
+            .map(VehicleResponseResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping("/drivers")
-  public ResponseEntity<DriverResponseResource> driver(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody DriverResource r) {
+  public ResponseEntity<?> driver(
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody DriverResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(new RegisterDriverCommand(p.tenantId(), r.name(), r.license())),
-        DriverResponseResource::from,
+        commands.handle(new RegisterDriverCommand(p.tenantId(), r.name(), r.license())),
+        DriverResponseResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 
   @PostMapping("/vehicles")
-  public ResponseEntity<VehicleResponseResource> vehicle(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody VehicleResource r) {
+  public ResponseEntity<?> vehicle(
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody VehicleResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(new RegisterVehicleCommand(p.tenantId(), r.name(), r.plate())),
-        VehicleResponseResource::from,
+        commands.handle(new RegisterVehicleCommand(p.tenantId(), r.name(), r.plate())),
+        VehicleResponseResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 }

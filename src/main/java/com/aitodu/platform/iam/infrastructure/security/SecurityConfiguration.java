@@ -30,7 +30,9 @@ public class SecurityConfiguration {
 
   @Bean
   SecurityFilterChain security(
-      HttpSecurity http, SessionService sessions, @Value("${app.cors.origins}") String origins)
+      HttpSecurity http,
+      com.aitodu.platform.iam.application.SessionQueryService sessions,
+      @Value("${app.cors.origins}") String origins)
       throws Exception {
     http.csrf(c -> c.disable())
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -96,14 +98,22 @@ public class SecurityConfiguration {
   private static void error(HttpServletResponse r, int status, String code) throws IOException {
     r.setStatus(status);
     r.setContentType("application/problem+json");
+    var problem = com.aitodu.platform.shared.interfaces.rest.GlobalExceptionHandler.problem(code);
     r.getWriter()
         .write(
-            "{\"status\":"
-                + status
-                + ",\"code\":\""
-                + code
-                + "\",\"detail\":\""
-                + (status == 401 ? "Authentication required." : "Access denied.")
-                + "\"}");
+            tools.jackson.databind.json.JsonMapper.builder()
+                .build()
+                .writeValueAsString(
+                    Map.of(
+                        "type",
+                        problem.getType().toString(),
+                        "title",
+                        problem.getTitle(),
+                        "status",
+                        status,
+                        "detail",
+                        problem.getDetail(),
+                        "code",
+                        code)));
   }
 }

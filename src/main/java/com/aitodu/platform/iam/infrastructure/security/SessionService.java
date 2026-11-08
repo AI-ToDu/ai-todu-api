@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SessionService {
+public class SessionService
+    implements com.aitodu.platform.iam.application.SessionCommandService,
+        com.aitodu.platform.iam.application.SessionQueryService {
   @PersistenceContext private EntityManager em;
   private final AccountRepository accounts;
   private final PasswordHasher passwords;

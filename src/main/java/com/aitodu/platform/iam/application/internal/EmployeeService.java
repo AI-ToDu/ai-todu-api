@@ -1,8 +1,11 @@
 package com.aitodu.platform.iam.application.internal;
 
+import com.aitodu.platform.iam.application.EmployeeCommandService;
+import com.aitodu.platform.iam.application.EmployeeQueryService;
 import com.aitodu.platform.iam.application.PasswordHasher;
 import com.aitodu.platform.iam.domain.model.aggregates.UserAccount;
 import com.aitodu.platform.iam.domain.model.commands.CreateEmployeeCommand;
+import com.aitodu.platform.iam.domain.model.queries.*;
 import com.aitodu.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.aitodu.platform.iam.domain.repositories.AccountRepository;
 import com.aitodu.platform.shared.application.*;
@@ -13,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class EmployeeService {
+public class EmployeeService implements EmployeeCommandService, EmployeeQueryService {
   private final AccountRepository accounts;
   private final PasswordHasher passwords;
   private final CommandExecutor commands;
@@ -47,5 +50,10 @@ public class EmployeeService {
           accounts.save(user);
           return user;
         });
+  }
+
+  @Transactional(readOnly = true)
+  public List<UserAccount> handle(GetEmployeesQuery q) {
+    return list(q.tenantId());
   }
 }

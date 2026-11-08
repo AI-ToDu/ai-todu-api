@@ -30,7 +30,13 @@ public class GlobalExceptionHandler {
   }
 
   public static ProblemDetail problem(String code) {
-    var p = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status(code)), message(code));
+    return problem(code, status(code));
+  }
+
+  private static ProblemDetail problem(String code, int status) {
+    var p = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), message(code));
+    p.setType(java.net.URI.create("about:blank"));
+    p.setTitle(HttpStatus.valueOf(status).getReasonPhrase());
     p.setProperty("code", code);
     return p;
   }
@@ -52,19 +58,20 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler({
+    org.springframework.web.bind.MethodArgumentNotValidException.class,
+    org.springframework.web.method.annotation.HandlerMethodValidationException.class,
     IllegalArgumentException.class,
     org.springframework.http.converter.HttpMessageNotReadableException.class,
     org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class
   })
   ResponseEntity<ProblemDetail> invalid(Exception e) {
-    var p = problem("INVALID_TEXT");
+    var p = problem("INVALID_TEXT", 400);
     return ResponseEntity.badRequest().body(p);
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)
   ResponseEntity<ProblemDetail> conflict(Exception e) {
-    var p = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message("CONFLICT"));
-    p.setProperty("code", "CONFLICT");
+    var p = problem("CONFLICT", 409);
     return ResponseEntity.status(409).body(p);
   }
 

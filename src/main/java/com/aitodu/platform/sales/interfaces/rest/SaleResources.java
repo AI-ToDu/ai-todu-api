@@ -1,6 +1,5 @@
 package com.aitodu.platform.sales.interfaces.rest;
 
-import com.aitodu.platform.sales.domain.model.aggregates.Sale;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
@@ -8,11 +7,17 @@ import java.util.*;
 public final class SaleResources {
   private SaleResources() {}
 
-  public record LineRequest(UUID productId, BigDecimal quantity) {}
+  public record LineRequest(
+      @jakarta.validation.constraints.NotNull UUID productId,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive
+          BigDecimal quantity) {}
 
-  public record ConfirmSaleResource(List<LineRequest> lines) {}
+  public record ConfirmSaleResource(
+      @jakarta.validation.constraints.NotEmpty
+          List<@jakarta.validation.Valid @jakarta.validation.constraints.NotNull LineRequest>
+              lines) {}
 
-  public record CancelResource(String reason) {}
+  public record CancelResource(@jakarta.validation.constraints.NotBlank String reason) {}
 
   public record LineResource(
       UUID id,
@@ -33,28 +38,5 @@ public final class SaleResources {
       BigDecimal total,
       Instant createdAt,
       List<LineResource> lines,
-      ReceiptResource receipt) {
-    public static SaleResource from(Sale a) {
-      return new SaleResource(
-          a.id(),
-          a.number(),
-          a.status(),
-          BigDecimal.valueOf(a.totalCents(), 2),
-          a.createdAt(),
-          a.lines().stream()
-              .map(
-                  l ->
-                      new LineResource(
-                          l.id(),
-                          l.productId(),
-                          l.name(),
-                          l.sku(),
-                          l.quantity(),
-                          l.price().amount(),
-                          l.cost().amount(),
-                          l.returned()))
-              .toList(),
-          new ReceiptResource("REC-" + a.number()));
-    }
-  }
+      ReceiptResource receipt) {}
 }

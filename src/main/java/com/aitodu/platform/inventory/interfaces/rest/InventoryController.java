@@ -3,9 +3,13 @@ package com.aitodu.platform.inventory.interfaces.rest;
 import static com.aitodu.platform.inventory.interfaces.rest.InventoryResources.*;
 
 import com.aitodu.platform.iam.infrastructure.security.WorkspacePrincipal;
-import com.aitodu.platform.inventory.application.internal.InventoryService;
+import com.aitodu.platform.inventory.application.InventoryCommandService;
+import com.aitodu.platform.inventory.application.InventoryQueryService;
 import com.aitodu.platform.inventory.domain.model.commands.*;
+import com.aitodu.platform.inventory.domain.model.queries.*;
 import com.aitodu.platform.inventory.domain.model.valueobjects.Sku;
+import com.aitodu.platform.inventory.interfaces.rest.transform.MovementResponseResourceFromEntityAssembler;
+import com.aitodu.platform.inventory.interfaces.rest.transform.ProductResourceFromEntityAssembler;
 import com.aitodu.platform.shared.domain.*;
 import com.aitodu.platform.shared.interfaces.rest.*;
 import java.util.UUID;
@@ -17,26 +21,31 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1")
 public class InventoryController {
-  private final InventoryService service;
+  private final InventoryCommandService commands;
+  private final InventoryQueryService queries;
 
-  public InventoryController(InventoryService s) {
-    service = s;
+  public InventoryController(InventoryCommandService commands, InventoryQueryService queries) {
+    this.commands = commands;
+    this.queries = queries;
   }
 
   @GetMapping("/products")
   public CollectionResource<ProductResource> products(
       @AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.list(p.tenantId()).stream().map(ProductResource::from).toList());
+        queries.handle(new GetInventoryQuery(p.tenantId())).stream()
+            .map(ProductResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping("/products")
   @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
   public ResponseEntity<?> create(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody CreateProductResource r) {
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody CreateProductResource r) {
     DomainViolation.require(r.minimum() != null, "INVALID_QUANTITY");
     return ResponseEntityAssembler.from(
-        service.handle(
+        commands.handle(
             new CreateProductCommand(
                 p.tenantId(),
                 new Sku(r.sku()),
@@ -44,7 +53,7 @@ public class InventoryController {
                 Money.of(r.price()),
                 Money.of(r.cost()),
                 r.minimum())),
-        ProductResource::from,
+        ProductResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 
@@ -53,10 +62,10 @@ public class InventoryController {
   public ResponseEntity<?> conservation(
       @AuthenticationPrincipal WorkspacePrincipal p,
       @PathVariable UUID id,
-      @RequestBody ConservationResource r) {
+      @jakarta.validation.Valid @RequestBody ConservationResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(new ChangeConservationCommand(p.tenantId(), id, r.conservation())),
-        ProductResource::from,
+        commands.handle(new ChangeConservationCommand(p.tenantId(), id, r.conservation())),
+        ProductResourceFromEntityAssembler::toResourceFromEntity,
         200);
   }
 
@@ -65,15 +74,18 @@ public class InventoryController {
   public CollectionResource<MovementResponseResource> movements(
       @AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.movements(p.tenantId()).stream().map(MovementResponseResource::from).toList());
+        queries.handle(new GetMovementsQuery(p.tenantId())).stream()
+            .map(MovementResponseResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping("/movements")
   @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
   public ResponseEntity<?> movement(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody MovementResource r) {
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody MovementResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(
+        commands.handle(
             new RecordMovementCommand(
                 p.tenantId(),
                 p.id(),
@@ -81,7 +93,7 @@ public class InventoryController {
                 Quantity.positive(r.quantity()),
                 r.type(),
                 r.reason())),
-        ProductResource::from,
+        ProductResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 }

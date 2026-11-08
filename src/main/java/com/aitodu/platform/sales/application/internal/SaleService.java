@@ -1,9 +1,11 @@
 package com.aitodu.platform.sales.application.internal;
 
 import com.aitodu.platform.sales.application.SaleCommandService;
+import com.aitodu.platform.sales.application.SaleQueryService;
 import com.aitodu.platform.sales.application.internal.outboundservices.InventoryGateway;
 import com.aitodu.platform.sales.domain.model.aggregates.Sale;
 import com.aitodu.platform.sales.domain.model.commands.*;
+import com.aitodu.platform.sales.domain.model.queries.*;
 import com.aitodu.platform.sales.domain.repositories.SaleRepository;
 import com.aitodu.platform.sales.interfaces.acl.SalesContextFacade;
 import com.aitodu.platform.shared.application.*;
@@ -15,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SaleService implements SaleCommandService, SalesContextFacade {
+public class SaleService implements SaleCommandService, SalesContextFacade, SaleQueryService {
   private final SaleRepository repository;
   private final InventoryGateway inventory;
   private final CommandExecutor commands;
@@ -145,5 +147,10 @@ public class SaleService implements SaleCommandService, SalesContextFacade {
         a.lines().stream()
             .map(l -> new LineSnapshot(l.id(), l.productId(), l.name(), l.quantity()))
             .toList());
+  }
+
+  @Transactional(readOnly = true)
+  public List<Sale> handle(GetSalesQuery q) {
+    return list(q.tenantId());
   }
 }

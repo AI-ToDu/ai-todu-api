@@ -36,4 +36,6 @@ jobs:
         if: always()
         with:
           name: api-test-results
-          path: target/surefire-reports/
+          path: |
+            target/surefire-reports/
+            target/contract-evidence/
