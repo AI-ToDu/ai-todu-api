@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI-ToDu integration messages v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "eventId",
+        "tenantId",
+        "type",
+        "version",
+        "occurredAt",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tenantId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "const": "inventory.stock-below-minimum"
+        },
+        "version": {
+          "const": 1
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "productId",
+            "quantity",
+            "minimum"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "productId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "quantity": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minimum": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "eventId",
+        "tenantId",
+        "type",
+        "version",
+        "occurredAt",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tenantId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "const": "sales.sale-confirmed"
+        },
+        "version": {
+          "const": 1
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "saleId",
+            "totalCents",
+            "currency"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "saleId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "totalCents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "currency": {
+              "const": "PEN"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "eventId",
+        "tenantId",
+        "type",
+        "version",
+        "occurredAt",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tenantId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "const": "logistics.delivery-confirmed"
+        },
+        "version": {
+          "const": 1
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "dispatchId"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "dispatchId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

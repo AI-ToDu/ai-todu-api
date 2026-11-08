@@ -1,0 +1,3 @@
+CREATE TABLE suppliers (id UUID PRIMARY KEY, tenant_id UUID NOT NULL REFERENCES workspaces(id), name VARCHAR(160) NOT NULL, contact VARCHAR(240) NOT NULL, UNIQUE(tenant_id,id));
+CREATE TABLE purchase_orders (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, supplier_id UUID NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, version BIGINT, FOREIGN KEY(tenant_id,supplier_id) REFERENCES suppliers(tenant_id,id));
+CREATE TABLE purchase_lines (purchase_id UUID NOT NULL REFERENCES purchase_orders(id), line_order INTEGER NOT NULL, id UUID NOT NULL UNIQUE, product_id UUID NOT NULL REFERENCES inventory_items(id), quantity INTEGER NOT NULL CHECK(quantity>0), received INTEGER NOT NULL CHECK(received>=0 AND received<=quantity), PRIMARY KEY(purchase_id,line_order));
