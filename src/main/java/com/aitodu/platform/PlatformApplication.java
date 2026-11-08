@@ -7,8 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 public class PlatformApplication {
-  public static void main(String[] args) throws java.sql.SQLException {
-    com.aitodu.platform.shared.infrastructure.provisioning.DatabaseProvisioner.runIfRequested();
+  public static void main(String[] args) {
     SpringApplication.run(PlatformApplication.class, args);
   }
 }

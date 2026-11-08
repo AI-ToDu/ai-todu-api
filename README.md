@@ -89,7 +89,7 @@ Build with `docker build -t aitodu-api .`. The multi-stage image runs as a non-r
 
 The `prod` profile requires `JDBC_DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, and a `JWT_SECRET` containing at least 32 random bytes encoded as Base64. See [.env.example](.env.example); never commit real secrets. Configure `CORS_ORIGINS` explicitly. The development JWT key must not be used in production.
 
-An optional one-time `BOOTSTRAP_DATABASE_URL` allows an authorized administrator to create database `aitodu_av2` and restricted role `aitodu_app` on an existing instance. It does not alter existing application tables or rotate existing role credentials. Remove this privileged variable and redeploy immediately after provisioning. Ordinary runtime uses only the dedicated role.
+Provision the database and a restricted application role through a separate administrative connection. Ordinary runtime receives only its own database credentials; it has no provisioning or administrative credential.
 
 The free Render database instance has a limited lifetime and shared capacity. Keep exports outside Git and arrange continuity before its expiry. Academic records must use fictional data. No payments, SUNAT documents, AI forecasting or commercial production guarantees are implemented.
 
