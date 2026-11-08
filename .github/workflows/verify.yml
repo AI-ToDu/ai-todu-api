@@ -1,0 +1,39 @@
+name: Verify API
+on:
+  push:
+    branches: [main, 'fix/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: aitodu_test
+          POSTGRES_USER: aitodu_test
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U aitodu_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/aitodu_test
+      TEST_DATABASE_USER: aitodu_test
+      TEST_DATABASE_PASSWORD: ci-only-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: chmod +x mvnw
+      - run: ./mvnw -B verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-results
+          path: target/surefire-reports/
