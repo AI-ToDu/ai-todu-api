@@ -1,9 +1,11 @@
 package com.aitodu.platform.returns.interfaces.rest;
 
 import com.aitodu.platform.iam.infrastructure.security.WorkspacePrincipal;
-import com.aitodu.platform.returns.application.internal.ReturnService;
-import com.aitodu.platform.returns.domain.model.aggregates.CustomerReturn;
+import com.aitodu.platform.returns.application.ReturnCommandService;
+import com.aitodu.platform.returns.application.ReturnQueryService;
 import com.aitodu.platform.returns.domain.model.commands.RecordReturnCommand;
+import com.aitodu.platform.returns.domain.model.queries.*;
+import com.aitodu.platform.returns.interfaces.rest.transform.ReturnResourceFromEntityAssembler;
 import com.aitodu.platform.shared.domain.Quantity;
 import com.aitodu.platform.shared.interfaces.rest.*;
 import java.math.BigDecimal;
@@ -19,7 +21,12 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAnyRole('ADMIN','SALES')")
 public class ReturnsController {
   public record RecordReturnResource(
-      UUID saleId, UUID saleLineId, BigDecimal quantity, String disposition, String reason) {}
+      @jakarta.validation.constraints.NotNull UUID saleId,
+      @jakarta.validation.constraints.NotNull UUID saleLineId,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive
+          BigDecimal quantity,
+      @jakarta.validation.constraints.NotBlank String disposition,
+      @jakarta.validation.constraints.NotBlank String reason) {}
 
   public record ReturnResource(
       UUID id,
@@ -28,36 +35,30 @@ public class ReturnsController {
       int quantity,
       String disposition,
       String reason,
-      Instant createdAt) {
-    static ReturnResource from(CustomerReturn a) {
-      return new ReturnResource(
-          a.id(),
-          a.saleId(),
-          a.saleLineId(),
-          a.quantity(),
-          a.disposition(),
-          a.reason(),
-          a.createdAt());
-    }
-  }
+      Instant createdAt) {}
 
-  private final ReturnService service;
+  private final ReturnCommandService commands;
+  private final ReturnQueryService queries;
 
-  public ReturnsController(ReturnService s) {
-    service = s;
+  public ReturnsController(ReturnCommandService commands, ReturnQueryService queries) {
+    this.commands = commands;
+    this.queries = queries;
   }
 
   @GetMapping
   public CollectionResource<ReturnResource> list(@AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.list(p.tenantId()).stream().map(ReturnResource::from).toList());
+        queries.handle(new GetReturnsQuery(p.tenantId())).stream()
+            .map(ReturnResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping
-  public ResponseEntity<ReturnResource> record(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody RecordReturnResource r) {
+  public ResponseEntity<?> record(
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody RecordReturnResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(
+        commands.handle(
             new RecordReturnCommand(
                 p.tenantId(),
                 p.id(),
@@ -66,7 +67,7 @@ public class ReturnsController {
                 Quantity.positive(r.quantity()).value(),
                 r.disposition(),
                 r.reason())),
-        ReturnResource::from,
+        ReturnResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 }

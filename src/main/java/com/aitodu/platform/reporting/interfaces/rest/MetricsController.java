@@ -18,6 +18,7 @@ public class MetricsController {
 
   @GetMapping
   public MetricsQueryService.Metrics metrics(@AuthenticationPrincipal WorkspacePrincipal p) {
-    return service.query(p.tenantId());
+    return service.handle(
+        new com.aitodu.platform.reporting.domain.model.queries.GetMetricsQuery(p.tenantId()));
   }
 }

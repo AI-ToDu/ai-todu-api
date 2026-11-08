@@ -1,9 +1,12 @@
 package com.aitodu.platform.logistics.application.internal;
 
+import com.aitodu.platform.logistics.application.LogisticsCommandService;
+import com.aitodu.platform.logistics.application.LogisticsQueryService;
 import com.aitodu.platform.logistics.application.internal.outboundservices.SalesGateway;
 import com.aitodu.platform.logistics.domain.model.aggregates.*;
 import com.aitodu.platform.logistics.domain.model.commands.*;
 import com.aitodu.platform.logistics.domain.model.commands.PrepareDispatchCommand;
+import com.aitodu.platform.logistics.domain.model.queries.*;
 import com.aitodu.platform.logistics.domain.repositories.*;
 import com.aitodu.platform.shared.application.*;
 import com.aitodu.platform.shared.application.result.Result;
@@ -14,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LogisticsService
-    implements com.aitodu.platform.logistics.interfaces.acl.LogisticsContextFacade {
+    implements com.aitodu.platform.logistics.interfaces.acl.LogisticsContextFacade,
+        LogisticsCommandService,
+        LogisticsQueryService {
   private final DispatchRepository manifests;
   private final DriverRepository drivers;
   private final VehicleRepository vehicles;
@@ -152,5 +157,26 @@ public class LogisticsService
   @Transactional(readOnly = true)
   public long activeDispatches(UUID t) {
     return manifests.findAll(t).stream().filter(d -> d.status().equals("IN_TRANSIT")).count();
+  }
+
+  @Transactional(readOnly = true)
+  public List<DispatchManifest> handle(GetDispatchesQuery q) {
+    return list(q.tenantId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<Driver> handle(GetDriversQuery q) {
+    return drivers(q.tenantId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<Vehicle> handle(GetVehiclesQuery q) {
+    return vehicles(q.tenantId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<com.aitodu.platform.sales.interfaces.acl.SalesContextFacade.SaleSnapshot> handle(
+      GetDispatchCandidatesQuery q) {
+    return candidates(q.tenantId());
   }
 }

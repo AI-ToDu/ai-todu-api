@@ -1,6 +1,5 @@
 package com.aitodu.platform.inventory.interfaces.rest;
 
-import com.aitodu.platform.inventory.domain.model.aggregates.InventoryItem;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -8,11 +7,24 @@ public final class InventoryResources {
   private InventoryResources() {}
 
   public record CreateProductResource(
-      String sku, String name, BigDecimal price, BigDecimal cost, Integer minimum) {}
+      @jakarta.validation.constraints.NotBlank String sku,
+      @jakarta.validation.constraints.NotBlank String name,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.DecimalMin("0")
+          BigDecimal price,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.DecimalMin("0")
+          BigDecimal cost,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Min(0)
+          Integer minimum) {}
 
-  public record MovementResource(UUID productId, BigDecimal quantity, String type, String reason) {}
+  public record MovementResource(
+      @jakarta.validation.constraints.NotNull UUID productId,
+      @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive
+          BigDecimal quantity,
+      @jakarta.validation.constraints.NotBlank String type,
+      @jakarta.validation.constraints.NotBlank String reason) {}
 
-  public record ConservationResource(String conservation) {}
+  public record ConservationResource(
+      @jakarta.validation.constraints.NotBlank String conservation) {}
 
   public record MovementResponseResource(
       UUID id,
@@ -21,13 +33,7 @@ public final class InventoryResources {
       String type,
       String reason,
       UUID actorId,
-      java.time.Instant createdAt) {
-    public static MovementResponseResource from(
-        com.aitodu.platform.inventory.domain.model.entities.StockMovement m) {
-      return new MovementResponseResource(
-          m.id(), m.productId(), m.delta(), m.type(), m.reason(), m.actorId(), m.createdAt());
-    }
-  }
+      java.time.Instant createdAt) {}
 
   public record ProductResource(
       UUID id,
@@ -37,30 +43,5 @@ public final class InventoryResources {
       BigDecimal price,
       BigDecimal cost,
       int minimum,
-      String conservation) {
-    public static ProductResource from(InventoryItem a) {
-      return new ProductResource(
-          a.id(),
-          a.sku().value(),
-          a.name(),
-          a.quantity().value(),
-          a.price().amount(),
-          a.cost().amount(),
-          a.minimum(),
-          a.conservation());
-    }
-
-    public static ProductResource from(
-        com.aitodu.platform.inventory.interfaces.acl.InventoryContextFacade.ProductSnapshot a) {
-      return new ProductResource(
-          a.id(),
-          a.sku(),
-          a.name(),
-          a.quantity(),
-          a.price(),
-          a.cost(),
-          a.minimum(),
-          a.conservation());
-    }
-  }
+      String conservation) {}
 }

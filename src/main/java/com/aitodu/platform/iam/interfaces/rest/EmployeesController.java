@@ -1,8 +1,11 @@
 package com.aitodu.platform.iam.interfaces.rest;
 
-import com.aitodu.platform.iam.application.internal.EmployeeService;
+import com.aitodu.platform.iam.application.EmployeeCommandService;
+import com.aitodu.platform.iam.application.EmployeeQueryService;
 import com.aitodu.platform.iam.domain.model.commands.CreateEmployeeCommand;
+import com.aitodu.platform.iam.domain.model.queries.*;
 import com.aitodu.platform.iam.infrastructure.security.WorkspacePrincipal;
+import com.aitodu.platform.iam.interfaces.rest.transform.EmployeeResourceFromEntityAssembler;
 import com.aitodu.platform.shared.interfaces.rest.*;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -14,33 +17,38 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/employees")
 @PreAuthorize("hasRole('ADMIN')")
 public class EmployeesController {
-  private final EmployeeService service;
+  private final EmployeeCommandService commands;
+  private final EmployeeQueryService queries;
 
-  public EmployeesController(EmployeeService s) {
-    service = s;
+  public EmployeesController(EmployeeCommandService commands, EmployeeQueryService queries) {
+    this.commands = commands;
+    this.queries = queries;
   }
 
-  public record CreateEmployeeResource(String name, String email, String role, String password) {}
+  public record CreateEmployeeResource(
+      @jakarta.validation.constraints.NotBlank String name,
+      @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String email,
+      @jakarta.validation.constraints.NotBlank String role,
+      @jakarta.validation.constraints.NotBlank String password) {}
 
-  public record EmployeeResource(UUID id, String name, String email, String role, boolean active) {
-    static EmployeeResource from(com.aitodu.platform.iam.domain.model.aggregates.UserAccount u) {
-      return new EmployeeResource(u.id(), u.name(), u.email().value(), u.role(), u.active());
-    }
-  }
+  public record EmployeeResource(UUID id, String name, String email, String role, boolean active) {}
 
   @GetMapping
   public CollectionResource<EmployeeResource> list(@AuthenticationPrincipal WorkspacePrincipal p) {
     return new CollectionResource<>(
-        service.list(p.tenantId()).stream().map(EmployeeResource::from).toList());
+        queries.handle(new GetEmployeesQuery(p.tenantId())).stream()
+            .map(EmployeeResourceFromEntityAssembler::toResourceFromEntity)
+            .toList());
   }
 
   @PostMapping
-  public ResponseEntity<EmployeeResource> create(
-      @AuthenticationPrincipal WorkspacePrincipal p, @RequestBody CreateEmployeeResource r) {
+  public ResponseEntity<?> create(
+      @AuthenticationPrincipal WorkspacePrincipal p,
+      @jakarta.validation.Valid @RequestBody CreateEmployeeResource r) {
     return ResponseEntityAssembler.from(
-        service.handle(
+        commands.handle(
             new CreateEmployeeCommand(p.tenantId(), r.name(), r.email(), r.role(), r.password())),
-        EmployeeResource::from,
+        EmployeeResourceFromEntityAssembler::toResourceFromEntity,
         201);
   }
 }

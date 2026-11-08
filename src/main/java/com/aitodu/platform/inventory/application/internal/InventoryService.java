@@ -1,9 +1,11 @@
 package com.aitodu.platform.inventory.application.internal;
 
 import com.aitodu.platform.inventory.application.InventoryCommandService;
+import com.aitodu.platform.inventory.application.InventoryQueryService;
 import com.aitodu.platform.inventory.domain.model.aggregates.InventoryItem;
 import com.aitodu.platform.inventory.domain.model.commands.*;
 import com.aitodu.platform.inventory.domain.model.entities.StockMovement;
+import com.aitodu.platform.inventory.domain.model.queries.*;
 import com.aitodu.platform.inventory.domain.repositories.InventoryRepository;
 import com.aitodu.platform.inventory.interfaces.acl.InventoryContextFacade;
 import com.aitodu.platform.shared.application.*;
@@ -15,7 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class InventoryService implements InventoryCommandService, InventoryContextFacade {
+public class InventoryService
+    implements InventoryCommandService, InventoryContextFacade, InventoryQueryService {
   private final InventoryRepository repository;
   private final CommandExecutor commands;
   private final com.aitodu.platform.inventory.application.internal.eventhandlers
@@ -135,5 +138,15 @@ public class InventoryService implements InventoryCommandService, InventoryConte
   @Transactional(readOnly = true)
   public List<StockMovement> movements(UUID t) {
     return repository.movements(t);
+  }
+
+  @Transactional(readOnly = true)
+  public List<InventoryItem> handle(GetInventoryQuery q) {
+    return repository.findAll(q.tenantId());
+  }
+
+  @Transactional(readOnly = true)
+  public List<StockMovement> handle(GetMovementsQuery q) {
+    return movements(q.tenantId());
   }
 }

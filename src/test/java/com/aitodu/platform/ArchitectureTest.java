@@ -22,6 +22,10 @@ class ArchitectureTest {
           assertFalse(text.contains("import com.aitodu.platform.sales.domain"), path);
         if (path.contains("/sales/"))
           assertFalse(text.contains("import com.aitodu.platform.inventory.domain"), path);
+        if (path.endsWith("Controller.java"))
+          assertFalse(text.contains(".application.internal."), path);
+        if (path.endsWith("Resources.java"))
+          assertFalse(text.contains("static ") && text.contains(" from("), path);
       }
     }
   }
