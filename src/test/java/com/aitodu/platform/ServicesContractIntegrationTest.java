@@ -228,9 +228,28 @@ class ServicesContractIntegrationTest {
         "sales/" + cancellation.get("id").asText() + "/cancel",
         "{\"reason\":\"Example cancellation\"}",
         200);
+    int remaining = api("GET", "products", null, 200).get("items").get(0).get("quantity").asInt();
+    if (remaining > 0)
+      api(
+          "POST",
+          "movements",
+          "{\"productId\":\""
+              + id
+              + "\",\"quantity\":"
+              + remaining
+              + ",\"type\":\"ISSUE\",\"reason\":\"Alert reference review\"}",
+          201);
     relay.relay();
     var notifications = api("GET", "notifications", null, 200);
     assertTrue(notifications.get("items").size() > 0);
+    boolean productIdentified = false;
+    for (var notification : notifications.get("items"))
+      if (notification.get("type").asText().equals("LOW_STOCK")) {
+        assertEquals(id, notification.get("productId").asText());
+        productIdentified = true;
+      }
+    assertTrue(
+        productIdentified, "The HTTP notification resource must identify the low-stock product");
     api(
         "PATCH",
         "notifications/" + notifications.get("items").get(0).get("id").asText(),

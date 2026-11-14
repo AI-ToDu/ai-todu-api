@@ -5,6 +5,7 @@ import com.aitodu.platform.notifications.application.NotificationQueryService;
 import com.aitodu.platform.notifications.domain.model.aggregates.Notification;
 import com.aitodu.platform.notifications.domain.model.commands.*;
 import com.aitodu.platform.notifications.domain.model.queries.*;
+import com.aitodu.platform.notifications.domain.model.valueobjects.ProductReference;
 import com.aitodu.platform.notifications.domain.repositories.NotificationRepository;
 import com.aitodu.platform.shared.application.*;
 import com.aitodu.platform.shared.application.result.Result;
@@ -39,8 +40,15 @@ public class NotificationService
         };
     if (type != null && m.version() != 1)
       throw new IllegalArgumentException("Unsupported integration message version");
-    if (type != null && repository.find(m.tenantId(), m.eventId()).isEmpty())
-      repository.save(new Notification(m.eventId(), m.tenantId(), type, m.occurredAt(), false));
+    if (type != null && repository.find(m.tenantId(), m.eventId()).isEmpty()) {
+      ProductReference product =
+          type.equals("LOW_STOCK")
+              ? new ProductReference(
+                  UUID.fromString(Objects.toString(m.data().get("productId"), "")))
+              : null;
+      repository.save(
+          new Notification(m.eventId(), m.tenantId(), type, m.occurredAt(), false, product));
+    }
   }
 
   @Transactional(readOnly = true)

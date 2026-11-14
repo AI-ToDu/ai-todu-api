@@ -11,7 +11,7 @@ public class JpaNotificationRepository implements NotificationRepository {
   @PersistenceContext private EntityManager em;
 
   private Notification domain(NotificationPersistenceEntity e) {
-    return new Notification(e.id, e.tenantId, e.type, e.createdAt, e.read);
+    return new Notification(e.id, e.tenantId, e.type, e.createdAt, e.read, e.product);
   }
 
   public Optional<Notification> find(UUID t, UUID id) {
@@ -35,6 +35,7 @@ public class JpaNotificationRepository implements NotificationRepository {
     e.id = a.id();
     e.tenantId = a.tenantId();
     e.type = a.type();
+    e.product = a.product();
     e.createdAt = a.createdAt();
     e.read = a.read();
     em.merge(e);

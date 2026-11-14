@@ -3,6 +3,9 @@ package com.aitodu.platform;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.aitodu.platform.iam.domain.repositories.AccountRepository;
+import com.aitodu.platform.notifications.application.NotificationCommandService;
+import com.aitodu.platform.notifications.domain.model.commands.MarkNotificationReadCommand;
+import com.aitodu.platform.notifications.domain.repositories.NotificationRepository;
 import com.aitodu.platform.shared.application.*;
 import com.aitodu.platform.shared.domain.DomainViolation;
 import com.aitodu.platform.shared.infrastructure.outbox.OutboxRelay;
@@ -31,6 +34,8 @@ class OutboxIntegrationTest {
   @Autowired OutboxRelay relay;
   @Autowired JdbcTemplate db;
   @Autowired FaultProbe probe;
+  @Autowired NotificationRepository notifications;
+  @Autowired NotificationCommandService notificationCommands;
 
   static class FaultProbe implements IntegrationSubscriber {
     final AtomicBoolean fail = new AtomicBoolean();
@@ -127,5 +132,68 @@ class OutboxIntegrationTest {
     assertEquals(
         0,
         db.queryForObject("select count(*) from integration_outbox where id=?", Integer.class, id));
+  }
+
+  @Test
+  void productReferenceSurvivesRelayReadingAndTenantIsolation() {
+    var tenant = tenant();
+    var otherTenant = tenant();
+    var event = UUID.randomUUID();
+    var product = UUID.randomUUID();
+    commands.execute(
+        tenant,
+        () -> {
+          outbox.append(
+              event,
+              tenant,
+              "inventory.stock-below-minimum",
+              1,
+              Instant.now(),
+              Map.of("productId", product.toString(), "quantity", 1, "minimum", 2));
+          return true;
+        });
+    relay.relay();
+    assertEquals(product, notifications.find(tenant, event).orElseThrow().product().value());
+    assertTrue(notifications.find(otherTenant, event).isEmpty());
+    notificationCommands.handle(new MarkNotificationReadCommand(tenant, event));
+    var marked = notifications.find(tenant, event).orElseThrow();
+    assertTrue(marked.read());
+    assertEquals(product, marked.product().value());
+    assertEquals(
+        1,
+        db.queryForObject("select count(*) from notifications where id=?", Integer.class, event));
+
+    var legacy = UUID.randomUUID();
+    db.update(
+        "insert into notifications(id,tenant_id,type,created_at,is_read) values(?,?,?,?,?)",
+        legacy,
+        tenant,
+        "LOW_STOCK",
+        java.sql.Timestamp.from(Instant.now()),
+        false);
+    assertNull(notifications.find(tenant, legacy).orElseThrow().product());
+  }
+
+  @Test
+  void malformedProductReferenceDoesNotPublishAnUntraceableAlert() {
+    var tenant = tenant();
+    var event = UUID.randomUUID();
+    commands.execute(
+        tenant,
+        () -> {
+          outbox.append(
+              event,
+              tenant,
+              "inventory.stock-below-minimum",
+              1,
+              Instant.now(),
+              Map.of("productId", "not-a-product-id", "quantity", 1, "minimum", 2));
+          return true;
+        });
+    relay.relay();
+    assertTrue(notifications.find(tenant, event).isEmpty());
+    assertEquals(
+        "PENDING",
+        db.queryForObject("select status from integration_outbox where id=?", String.class, event));
   }
 }

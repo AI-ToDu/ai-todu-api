@@ -11,6 +11,11 @@ public final class NotificationResourceFromEntityAssembler {
   private NotificationResourceFromEntityAssembler() {}
 
   public static NotificationResource toResourceFromEntity(Notification n) {
-    return new NotificationResource(n.id(), n.type(), n.createdAt(), n.read());
+    return new NotificationResource(
+        n.id(),
+        n.type(),
+        n.createdAt(),
+        n.read(),
+        n.product() == null ? null : n.product().value());
   }
 }
