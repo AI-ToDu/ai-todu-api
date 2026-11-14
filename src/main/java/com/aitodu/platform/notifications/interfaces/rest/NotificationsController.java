@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/notifications")
 public class NotificationsController {
-  public record NotificationResource(UUID id, String type, Instant createdAt, boolean read) {}
+  public record NotificationResource(
+      UUID id, String type, Instant createdAt, boolean read, UUID productId) {}
 
   private final NotificationCommandService commands;
   private final NotificationQueryService queries;

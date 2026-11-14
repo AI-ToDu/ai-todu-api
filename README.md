@@ -51,6 +51,8 @@ The versioned REST API is the **Open Host Service**. Resources, OpenAPI and [int
 
 Internal domain events stay inside their originating context. Its application publisher translates them into versioned integration messages. Notifications receives only those public messages.
 
+Low-stock notifications retain the `productId` supplied by the existing v1 integration message. Notifications owns a framework-independent `ProductReference` value object, persisted with a single-attribute JPA converter. Migration V5 adds a nullable `notifications.product_id` so older notifications remain readable. The HTTP resource exposes this optional reference; the web application resolves the SKU/name from its authorized product catalogue. No Inventory domain class or aggregate is imported into Notifications, and no product is inferred for historical records without a reference.
+
 ### Transactions, Transactional Outbox Pattern and idempotency
 
 A sale deducts all of its stock, saves its line snapshots and appends integration messages in one database transaction. A failed line rolls everything back. Cancelling a sale restores stock once; dispatching it never deducts stock a second time. Returns cannot exceed sold units and cannot occur during an active dispatch.
